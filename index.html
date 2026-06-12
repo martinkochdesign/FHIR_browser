@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FHIR Schema Explorer</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
 <style>
   :root {
     --bg: #f5f6fa;
@@ -20,234 +21,133 @@
     --accent-arr: #7c3aed;
     --accent-ref: #0891b2;
     --accent-enum: #be185d;
+    --accent-backbone: #9333ea;
     --required-dot: #ef4444;
     --hover-bg: #f0f1f5;
     --tree-line: #d1d5db;
     --shadow: 0 1px 3px rgba(0,0,0,0.08);
     --radius: 8px;
+    --binding-required: #dc2626;
+    --binding-extensible: #d97706;
+    --binding-preferred: #2563eb;
+    --binding-example: #6b7280;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    background: var(--bg); color: var(--text);
+    height: 100vh; display: flex; flex-direction: column; overflow: hidden;
   }
 
-  /* ── Header ── */
   header {
-    background: var(--panel-bg);
-    border-bottom: 1px solid var(--border);
-    padding: 12px 24px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-shrink: 0;
-    box-shadow: var(--shadow);
-    z-index: 100;
+    background: var(--panel-bg); border-bottom: 1px solid var(--border);
+    padding: 12px 24px; display: flex; align-items: center; gap: 16px;
+    flex-shrink: 0; box-shadow: var(--shadow); z-index: 100;
   }
-  header h1 {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--primary);
-    white-space: nowrap;
-  }
+  header h1 { font-size: 18px; font-weight: 700; color: var(--primary); white-space: nowrap; }
   header h1 span { color: var(--text); font-weight: 400; }
 
-  .header-controls {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-  }
+  .header-controls { display: flex; align-items: center; gap: 12px; flex: 1; flex-wrap: wrap; }
 
   select#version-select {
-    padding: 6px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    font-size: 14px;
-    background: var(--bg);
-    cursor: pointer;
-    outline: none;
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+    font-size: 14px; background: var(--bg); cursor: pointer; outline: none;
   }
   select#version-select:focus { border-color: var(--primary); }
+  select#version-select:disabled { opacity: .5; cursor: default; }
 
-  .search-wrapper {
-    position: relative;
-    flex: 1;
-    max-width: 420px;
-  }
+  .search-wrapper { position: relative; flex: 1; max-width: 420px; min-width: 200px; }
   .search-wrapper input {
-    width: 100%;
-    padding: 8px 12px 8px 36px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    font-size: 14px;
-    outline: none;
-    transition: border-color .15s;
+    width: 100%; padding: 8px 12px 8px 36px; border: 1px solid var(--border);
+    border-radius: var(--radius); font-size: 14px; outline: none; transition: border-color .15s;
   }
   .search-wrapper input:focus { border-color: var(--primary); }
   .search-wrapper .search-icon {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted);
-    font-size: 16px;
-    pointer-events: none;
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    color: var(--text-muted); font-size: 16px; pointer-events: none;
   }
   .search-wrapper .clear-btn {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 16px;
-    display: none;
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--text-muted); cursor: pointer;
+    font-size: 16px; display: none;
   }
   .search-wrapper .clear-btn.visible { display: block; }
 
   .dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: var(--panel-bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    max-height: 360px;
-    overflow-y: auto;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-    z-index: 200;
-    display: none;
+    position: absolute; top: 100%; left: 0; right: 0; background: var(--panel-bg);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    max-height: 360px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    z-index: 200; display: none;
   }
   .dropdown.open { display: block; }
   .dropdown-group-label {
-    padding: 6px 12px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    color: var(--text-muted);
-    background: var(--bg);
-    position: sticky;
-    top: 0;
+    padding: 6px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--text-muted); background: var(--bg);
+    position: sticky; top: 0;
   }
-  .dropdown-item {
-    padding: 8px 12px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background .1s;
-  }
-  .dropdown-item:hover, .dropdown-item.active {
-    background: var(--primary-light);
-    color: var(--primary);
+  .dropdown-item { padding: 8px 12px; cursor: pointer; font-size: 14px; transition: background .1s; }
+  .dropdown-item:hover, .dropdown-item.active { background: var(--primary-light); color: var(--primary); }
+  .dropdown-item .item-desc {
+    display: block; font-size: 11px; color: var(--text-muted); margin-top: 1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
-  .status-msg {
-    font-size: 13px;
-    color: var(--text-muted);
-    white-space: nowrap;
+  .hdr-btn {
+    padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius);
+    font-size: 13px; cursor: pointer; white-space: nowrap; transition: all .15s;
+  }
+  .hdr-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .hdr-btn.primary:hover { opacity: .9; }
+  .hdr-btn.secondary { background: var(--bg); color: var(--text-muted); }
+  .hdr-btn.secondary:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+
+  .status-msg { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+  .status-msg .cached-badge {
+    display: inline-block; background: #d1fae5; color: #065f46;
+    font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; margin-left: 4px;
   }
 
-  #load-file-btn {
-    padding: 6px 14px;
-    background: var(--primary);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius);
-    font-size: 13px;
-    cursor: pointer;
-    display: none;
-    white-space: nowrap;
-  }
-  #load-file-btn:hover { opacity: 0.9; }
-
-  /* ── Main layout ── */
-  .main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-
-  /* ── Tree panel ── */
-  .tree-panel {
-    flex: 1;
-    overflow: auto;
-    padding: 16px 24px;
-  }
+  .main { display: flex; flex: 1; overflow: hidden; position: relative; }
+  .tree-panel { flex: 1; overflow: auto; padding: 16px 24px; }
 
   .tree-empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: var(--text-muted);
-    font-size: 15px;
-    text-align: center;
-    line-height: 1.6;
+    display: flex; align-items: center; justify-content: center;
+    height: 100%; color: var(--text-muted); font-size: 15px; text-align: center; line-height: 1.6;
   }
+  .tree-empty .instructions { max-width: 580px; }
+  .tree-empty .instructions h2 { font-size: 16px; color: var(--text); margin: 16px 0 8px; }
+  .tree-empty .instructions code {
+    background: var(--panel-bg); padding: 2px 6px; border-radius: 4px;
+    font-size: 13px; border: 1px solid var(--border);
+  }
+  .tree-empty .instructions .dl-links { text-align: left; margin: 8px 0; font-size: 13px; line-height: 2; }
+  .tree-empty .instructions .dl-links a { color: var(--primary); text-decoration: none; }
+  .tree-empty .instructions .dl-links a:hover { text-decoration: underline; }
 
-  /* Tree nodes */
   .tree-node { position: relative; }
-  .tree-children {
-    margin-left: 20px;
-    padding-left: 16px;
-    border-left: 1px solid var(--tree-line);
-  }
+  .tree-children { margin-left: 20px; padding-left: 16px; border-left: 1px solid var(--tree-line); }
 
   .node-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 3px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    user-select: none;
-    transition: background .1s;
-    position: relative;
+    display: flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 4px;
+    cursor: pointer; user-select: none; transition: background .1s; position: relative;
   }
   .node-row:hover { background: var(--hover-bg); }
   .node-row.selected { background: var(--primary-light); }
 
   .toggle-icon {
-    width: 18px;
-    height: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    color: var(--text-muted);
-    flex-shrink: 0;
-    transition: transform .15s;
+    width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--text-muted); flex-shrink: 0; transition: transform .15s;
   }
   .toggle-icon.expanded { transform: rotate(90deg); }
   .toggle-icon.leaf { visibility: hidden; }
 
-  .required-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--required-dot);
-    flex-shrink: 0;
-  }
+  .required-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--required-dot); flex-shrink: 0; }
 
   .type-badge {
-    font-size: 10px;
-    font-weight: 700;
-    padding: 1px 5px;
-    border-radius: 3px;
-    color: #fff;
-    flex-shrink: 0;
-    line-height: 1.4;
+    font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px;
+    color: #fff; flex-shrink: 0; line-height: 1.4;
   }
   .type-badge.obj { background: var(--accent-obj); }
   .type-badge.str { background: var(--accent-str); }
@@ -256,180 +156,122 @@
   .type-badge.arr { background: var(--accent-arr); }
   .type-badge.ref { background: var(--accent-ref); }
   .type-badge.enum { background: var(--accent-enum); }
+  .type-badge.backbone { background: var(--accent-backbone); }
 
-  .node-name {
-    font-size: 14px;
-    font-weight: 500;
-  }
-
-  .node-type-label {
-    font-size: 12px;
-    color: var(--text-muted);
-  }
-
+  .node-name { font-size: 14px; font-weight: 500; }
+  .node-type-label { font-size: 12px; color: var(--text-muted); }
   .node-cardinality {
-    font-size: 11px;
-    color: var(--text-muted);
-    background: var(--bg);
-    padding: 0 4px;
-    border-radius: 3px;
+    font-size: 11px; color: var(--text-muted); background: var(--bg);
+    padding: 0 4px; border-radius: 3px;
+  }
+  .node-short {
+    font-size: 12px; color: var(--text-muted); margin-left: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px;
+  }
+  .node-binding-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    border: 1px solid rgba(0,0,0,0.1);
   }
 
-  .node-actions {
-    margin-left: auto;
-    display: flex;
-    gap: 4px;
-    opacity: 0;
-    transition: opacity .15s;
-  }
+  .node-actions { margin-left: auto; display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
   .node-row:hover .node-actions { opacity: 1; }
-
   .node-actions button {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-size: 12px;
-    cursor: pointer;
-    color: var(--text-muted);
-    transition: all .1s;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+    padding: 2px 6px; font-size: 12px; cursor: pointer; color: var(--text-muted); transition: all .1s;
   }
-  .node-actions button:hover {
-    background: var(--primary-light);
-    color: var(--primary);
-    border-color: var(--primary);
-  }
+  .node-actions button:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
 
-  /* ── Detail panel ── */
   .detail-panel {
-    width: 360px;
-    background: var(--panel-bg);
-    border-left: 1px solid var(--border);
-    overflow-y: auto;
-    flex-shrink: 0;
-    display: none;
-    flex-direction: column;
+    width: 400px; background: var(--panel-bg); border-left: 1px solid var(--border);
+    overflow-y: auto; flex-shrink: 0; display: none; flex-direction: column;
   }
   .detail-panel.open { display: flex; }
 
   .detail-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    background: var(--panel-bg);
-    z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--panel-bg); z-index: 10;
   }
   .detail-header h3 { font-size: 15px; font-weight: 600; }
-  .detail-close {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: var(--text-muted);
-    line-height: 1;
-  }
+  .detail-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); line-height: 1; }
 
   .detail-body { padding: 16px; }
-
-  .detail-section {
-    margin-bottom: 16px;
-  }
+  .detail-section { margin-bottom: 16px; }
   .detail-section label {
-    display: block;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    color: var(--text-muted);
-    margin-bottom: 4px;
+    display: block; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--text-muted); margin-bottom: 4px;
   }
-  .detail-section .value {
-    font-size: 14px;
-    line-height: 1.5;
-    word-break: break-word;
-  }
+  .detail-section .value { font-size: 14px; line-height: 1.5; word-break: break-word; }
 
-  .path-copy-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+  .path-copy-row { display: flex; align-items: center; gap: 8px; }
   .path-copy-row code {
-    flex: 1;
-    background: var(--bg);
-    padding: 6px 10px;
-    border-radius: 4px;
-    font-size: 13px;
-    font-family: 'SF Mono', 'Fira Code', monospace;
-    word-break: break-all;
+    flex: 1; background: var(--bg); padding: 6px 10px; border-radius: 4px;
+    font-size: 13px; font-family: 'SF Mono', 'Fira Code', monospace; word-break: break-all;
   }
   .path-copy-row button {
-    background: var(--primary);
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 10px;
-    font-size: 12px;
-    cursor: pointer;
-    white-space: nowrap;
+    background: var(--primary); color: #fff; border: none; border-radius: 4px;
+    padding: 6px 10px; font-size: 12px; cursor: pointer; white-space: nowrap;
   }
   .path-copy-row button:hover { opacity: .9; }
 
-  .enum-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 4px;
+  .binding-badge {
+    display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px;
+    border-radius: 4px; color: #fff; margin-right: 6px;
   }
+  .binding-badge.required { background: var(--binding-required); }
+  .binding-badge.extensible { background: var(--binding-extensible); }
+  .binding-badge.preferred { background: var(--binding-preferred); }
+  .binding-badge.example { background: var(--binding-example); }
+
+  .detail-link { color: var(--primary); text-decoration: none; cursor: pointer; }
+  .detail-link:hover { text-decoration: underline; }
+
+  .type-list { margin-top: 4px; }
+  .type-list .type-entry {
+    font-size: 13px; padding: 3px 0; border-bottom: 1px solid var(--bg);
+  }
+  .type-list .type-entry:last-child { border-bottom: none; }
+  .type-list .type-code { font-weight: 600; color: var(--primary); }
+  .type-list .type-profiles { font-size: 12px; color: var(--text-muted); margin-left: 8px; }
+
+  .constraint-list { margin-top: 4px; }
+  .constraint-item {
+    font-size: 13px; padding: 4px 0; border-bottom: 1px solid var(--bg);
+  }
+  .constraint-item:last-child { border-bottom: none; }
+  .constraint-key { font-weight: 600; color: var(--accent-obj); margin-right: 6px; }
+  .constraint-severity {
+    font-size: 11px; padding: 1px 5px; border-radius: 3px; margin-right: 6px;
+    color: #fff;
+  }
+  .constraint-severity.error { background: var(--binding-required); }
+  .constraint-severity.warning { background: var(--binding-extensible); }
+
+  .enum-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
   .enum-list span {
-    background: var(--bg);
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-family: monospace;
+    background: var(--bg); padding: 2px 8px; border-radius: 4px;
+    font-size: 12px; font-family: monospace;
   }
 
   .toast {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
+    position: fixed; bottom: 24px; left: 50%;
     transform: translateX(-50%) translateY(80px);
-    background: #1a1a2e;
-    color: #fff;
-    padding: 8px 20px;
-    border-radius: 6px;
-    font-size: 14px;
-    opacity: 0;
-    transition: all .3s;
-    z-index: 999;
-    pointer-events: none;
+    background: #1a1a2e; color: #fff; padding: 8px 20px; border-radius: 6px;
+    font-size: 14px; opacity: 0; transition: all .3s; z-index: 999; pointer-events: none;
   }
-  .toast.show {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   .loading-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(255,255,255,0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 50;
+    position: absolute; inset: 0; background: rgba(255,255,255,0.85);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px; z-index: 50;
   }
   .spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--border);
-    border-top-color: var(--primary);
-    border-radius: 50%;
+    width: 32px; height: 32px; border: 3px solid var(--border);
+    border-top-color: var(--primary); border-radius: 50%;
     animation: spin .6s linear infinite;
   }
+  .loading-text { font-size: 14px; color: var(--text-muted); }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
@@ -438,30 +280,43 @@
 <header>
   <h1>🔥 FHIR <span>Schema Explorer</span></h1>
   <div class="header-controls">
-    <select id="version-select">
-      <option value="R4" selected>R4 (4.0.1)</option>
-      <option value="R4B">R4B (4.3.0)</option>
-      <option value="R5">R5 (5.0.0)</option>
+    <select id="version-select" disabled>
+      <option value="">— no definitions loaded —</option>
     </select>
     <div class="search-wrapper">
       <span class="search-icon">🔍</span>
-      <input type="text" id="search-input" placeholder="Search resources (e.g. Patient, Observation…)" autocomplete="off" disabled>
+      <input type="text" id="search-input" placeholder="Load definitions to begin…" autocomplete="off" disabled>
       <button class="clear-btn" id="clear-btn">✕</button>
       <div class="dropdown" id="dropdown"></div>
     </div>
-    <button id="load-file-btn">📂 Load local file</button>
-    <input type="file" id="file-input" accept=".json" style="display:none;">
-    <span class="status-msg" id="status-msg">Loading schema…</span>
+    <button class="hdr-btn primary" id="load-file-btn">📂 Load definitions ZIP</button>
+    <button class="hdr-btn secondary" id="clear-cache-btn" style="display:none;">🗑️ Clear cache</button>
+    <input type="file" id="file-input" accept=".zip" style="display:none;">
+    <span class="status-msg" id="status-msg"></span>
   </div>
 </header>
 
 <div class="main" id="main-area">
   <div class="tree-panel" id="tree-panel">
     <div class="tree-empty" id="tree-empty">
-      <div>
-        <div style="font-size:48px;margin-bottom:12px;">🌳</div>
-        <div><strong>Select a FHIR resource</strong> to explore its structure.</div>
-        <div style="margin-top:6px;font-size:13px;">Pick a version and search above.</div>
+      <div class="instructions" id="instructions">
+        <div style="font-size:48px;margin-bottom:12px;">📂</div>
+        <div><strong>Load FHIR definitions</strong> to get started.</div>
+        <div style="margin-top:12px;font-size:13px;">
+          Download the <code>definitions.json.zip</code> for the version you need,<br>
+          then click <strong>📂 Load definitions ZIP</strong>.
+        </div>
+        <h2>Download links</h2>
+        <div class="dl-links">
+          <a href="https://hl7.org/fhir/R4/definitions.json.zip" target="_blank">⬇ R4 (4.0.1) — definitions.json.zip</a><br>
+          <a href="https://hl7.org/fhir/R4B/definitions.json.zip" target="_blank">⬇ R4B (4.3.0) — definitions.json.zip</a><br>
+          <a href="https://hl7.org/fhir/R5/definitions.json.zip" target="_blank">⬇ R5 (5.0.0) — definitions.json.zip</a>
+        </div>
+        <div style="margin-top:12px;font-size:13px;color:var(--text-muted);">
+          Definitions are cached in your browser — you only need to load each version once.<br>
+          The ZIP contains StructureDefinitions with full element metadata:<br>
+          descriptions, bindings, value sets, cardinality, types, and constraints.
+        </div>
       </div>
     </div>
     <div id="tree-root" style="display:none;"></div>
@@ -478,225 +333,428 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- JSZip (v3.10.1) minified — MIT license -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
 <script>
 (() => {
-  // ── Config ──
-  const SCHEMA_URLS = {
-    R4:  'https://hl7.org/fhir/R4/fhir.schema.json',
-    R4B: 'https://hl7.org/fhir/R4B/fhir.schema.json',
-    R5:  'https://hl7.org/fhir/R5/fhir.schema.json',
-  };
+  // ═══════════════════════════════════════════
+  //  IndexedDB CACHE
+  // ═══════════════════════════════════════════
+  const DB_NAME = 'FHIRExplorerDefs';
+  const DB_VER  = 1;
+  const STORE   = 'definitions';
 
-  const CORS_PROXIES = [
-    url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  ];
-
-  // Known FHIR resource type names (common across versions)
-  const KNOWN_RESOURCES = new Set([
-    'Account','ActivityDefinition','AdministrableProductDefinition','AdverseEvent',
-    'AllergyIntolerance','Appointment','AppointmentResponse','AuditEvent',
-    'Basic','Binary','BiologicallyDerivedProduct','BodyStructure','Bundle',
-    'CapabilityStatement','CarePlan','CareTeam','CatalogEntry','ChargeItem',
-    'ChargeItemDefinition','Citation','Claim','ClaimResponse','ClinicalImpression',
-    'ClinicalUseDefinition','CodeSystem','Communication','CommunicationRequest',
-    'CompartmentDefinition','Composition','ConceptMap','Condition','Consent',
-    'Contract','Coverage','CoverageEligibilityRequest','CoverageEligibilityResponse',
-    'DetectedIssue','Device','DeviceDefinition','DeviceMetric','DeviceRequest',
-    'DeviceUseStatement','DiagnosticReport','DocumentManifest','DocumentReference',
-    'Encounter','Endpoint','EnrollmentRequest','EnrollmentResponse',
-    'EpisodeOfCare','EventDefinition','Evidence','EvidenceReport','EvidenceVariable',
-    'ExampleScenario','ExplanationOfBenefit','FamilyMemberHistory','Flag',
-    'Goal','GraphDefinition','Group','GuidanceResponse','HealthcareService',
-    'ImagingStudy','Immunization','ImmunizationEvaluation','ImmunizationRecommendation',
-    'ImplementationGuide','Ingredient','InsurancePlan','Invoice','Library',
-    'Linkage','List','Location','ManufacturedItemDefinition','Measure',
-    'MeasureReport','Media','Medication','MedicationAdministration',
-    'MedicationDispense','MedicationKnowledge','MedicationRequest',
-    'MedicationStatement','MedicinalProductDefinition','MessageDefinition',
-    'MessageHeader','MolecularSequence','NamingSystem','NutritionOrder',
-    'NutritionProduct','Observation','ObservationDefinition','OperationDefinition',
-    'OperationOutcome','Organization','OrganizationAffiliation','PackagedProductDefinition',
-    'Parameters','Patient','PaymentNotice','PaymentReconciliation','Person',
-    'PlanDefinition','Practitioner','PractitionerRole','Procedure','Provenance',
-    'Questionnaire','QuestionnaireResponse','RegulatedAuthorization',
-    'RelatedPerson','RequestGroup','ResearchDefinition','ResearchElementDefinition',
-    'ResearchStudy','ResearchSubject','RiskAssessment','Schedule',
-    'SearchParameter','ServiceRequest','Slot','Specimen','SpecimenDefinition',
-    'StructureDefinition','StructureMap','Subscription','SubscriptionStatus',
-    'SubscriptionTopic','Substance','SubstanceDefinition','SupplyDelivery',
-    'SupplyRequest','Task','TerminologyCapabilities','TestReport','TestScript',
-    'ValueSet','VerificationResult','VisionPrescription',
-    // R5 additions
-    'ActorDefinition','ArtifactAssessment','BiologicallyDerivedProductDispense',
-    'ConditionDefinition','DeviceAssociation','DeviceDispense','DeviceUsage',
-    'EncounterHistory','FormularyItem','GenomicStudy','ImagingSelection',
-    'InventoryItem','InventoryReport','NutritionIntake',
-    'Permission','Requirements','TestPlan','Transport',
-  ]);
-
-  // ── State ──
-  let schemaCache = {};
-  let currentSchema = null;
-  let currentVersion = 'R4';
-  let resourceNames = [];
-  let complexTypes = [];
-  let selectedNode = null;
-
-  // ── DOM refs ──
-  const versionSelect = document.getElementById('version-select');
-  const searchInput = document.getElementById('search-input');
-  const clearBtn = document.getElementById('clear-btn');
-  const dropdown = document.getElementById('dropdown');
-  const statusMsg = document.getElementById('status-msg');
-  const treePanel = document.getElementById('tree-panel');
-  const treeEmpty = document.getElementById('tree-empty');
-  const treeRoot = document.getElementById('tree-root');
-  const detailPanel = document.getElementById('detail-panel');
-  const detailTitle = document.getElementById('detail-title');
-  const detailBody = document.getElementById('detail-body');
-  const detailClose = document.getElementById('detail-close');
-  const toastEl = document.getElementById('toast');
-  const mainArea = document.getElementById('main-area');
-  const loadFileBtn = document.getElementById('load-file-btn');
-  const fileInput = document.getElementById('file-input');
-
-  // ── Schema loading with CORS fallback chain ──
-  async function loadSchema(version) {
-    if (schemaCache[version]) {
-      currentSchema = schemaCache[version];
-      onSchemaReady();
-      return;
-    }
-
-    statusMsg.textContent = `Loading ${version} schema…`;
-    searchInput.disabled = true;
-    loadFileBtn.style.display = 'none';
-
-    // Show loading overlay
-    const overlay = document.createElement('div');
-    overlay.className = 'loading-overlay';
-    overlay.innerHTML = '<div class="spinner"></div>';
-    mainArea.style.position = 'relative';
-    mainArea.appendChild(overlay);
-
-    const directUrl = SCHEMA_URLS[version];
-
-    // Strategy 1: direct fetch
-    try {
-      const resp = await fetch(directUrl);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      schemaCache[version] = data;
-      currentSchema = data;
-      overlay.remove();
-      onSchemaReady();
-      return;
-    } catch (_) { /* CORS or network error — try proxies */ }
-
-    // Strategy 2: CORS proxies
-    for (const makeUrl of CORS_PROXIES) {
-      try {
-        const resp = await fetch(makeUrl(directUrl));
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const data = await resp.json();
-        schemaCache[version] = data;
-        currentSchema = data;
-        overlay.remove();
-        onSchemaReady();
-        return;
-      } catch (_) { /* try next proxy */ }
-    }
-
-    // Strategy 3: ask user to load a local file
-    overlay.remove();
-    statusMsg.textContent = `CORS blocked — load the ${version} schema file manually ↓`;
-    loadFileBtn.style.display = 'inline-block';
-    loadFileBtn.textContent = `📂 Load fhir.schema.json (${version})`;
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VER);
+      req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
   }
 
-  // ── File picker logic ──
+  async function getCached(key) {
+    try {
+      const db = await openDB();
+      return await new Promise(resolve => {
+        const r = db.transaction(STORE, 'readonly').objectStore(STORE).get(key);
+        r.onsuccess = () => resolve(r.result || null);
+        r.onerror = () => resolve(null);
+      });
+    } catch { return null; }
+  }
+
+  async function setCache(key, data) {
+    try {
+      const db = await openDB();
+      db.transaction(STORE, 'readwrite').objectStore(STORE).put(data, key);
+    } catch {}
+  }
+
+  async function getAllCachedKeys() {
+    try {
+      const db = await openDB();
+      return await new Promise(resolve => {
+        const r = db.transaction(STORE, 'readonly').objectStore(STORE).getAllKeys();
+        r.onsuccess = () => resolve(r.result || []);
+        r.onerror = () => resolve([]);
+      });
+    } catch { return []; }
+  }
+
+  async function clearCacheAll() {
+    try {
+      const db = await openDB();
+      db.transaction(STORE, 'readwrite').objectStore(STORE).clear();
+    } catch {}
+  }
+
+  // ═══════════════════════════════════════════
+  //  VERSION DETECTION
+  // ═══════════════════════════════════════════
+  function detectVersion(bundle) {
+    // Try fhirVersion from first entry
+    if (bundle.entry && bundle.entry.length) {
+      const fv = bundle.entry[0]?.resource?.fhirVersion;
+      if (fv) {
+        if (fv.startsWith('4.0')) return 'R4 (4.0.1)';
+        if (fv.startsWith('4.3')) return 'R4B (4.3.0)';
+        if (fv.startsWith('5.0')) return 'R5 (5.0.0)';
+        return `FHIR ${fv}`;
+      }
+    }
+    return 'Unknown';
+  }
+
+  function versionBaseUrl(versionLabel) {
+    if (versionLabel.includes('R4B') || versionLabel.includes('4.3')) return 'https://hl7.org/fhir/R4B';
+    if (versionLabel.includes('R5') || versionLabel.includes('5.0')) return 'https://hl7.org/fhir/R5';
+    return 'https://hl7.org/fhir/R4';
+  }
+
+  // ═══════════════════════════════════════════
+  //  STATE
+  // ═══════════════════════════════════════════
+  // Each loaded version stores: { version, baseUrl, resources: { ResourceName: { sd, elements, elementsByPath } } }
+  let versions = {};
+  let currentVersion = '';
+  let currentData = null;
+  let resourceNames = [];
+  let selectedNode = null;
+
+  // ═══════════════════════════════════════════
+  //  DOM REFS
+  // ═══════════════════════════════════════════
+  const $ = id => document.getElementById(id);
+  const versionSelect = $('version-select');
+  const searchInput   = $('search-input');
+  const clearBtn      = $('clear-btn');
+  const dropdown      = $('dropdown');
+  const statusMsg     = $('status-msg');
+  const treeEmpty     = $('tree-empty');
+  const treeRoot      = $('tree-root');
+  const detailPanel   = $('detail-panel');
+  const detailTitle   = $('detail-title');
+  const detailBody    = $('detail-body');
+  const detailCloseEl = $('detail-close');
+  const toastEl       = $('toast');
+  const mainArea      = $('main-area');
+  const loadFileBtn   = $('load-file-btn');
+  const clearCacheBtn = $('clear-cache-btn');
+  const fileInput     = $('file-input');
+  const instructions  = $('instructions');
+
+  // ═══════════════════════════════════════════
+  //  PROCESS DEFINITIONS BUNDLE
+  // ═══════════════════════════════════════════
+  function processBundle(bundle) {
+    const version = detectVersion(bundle);
+    const baseUrl = versionBaseUrl(version);
+    const resources = {};
+
+    for (const entry of (bundle.entry || [])) {
+      const res = entry.resource;
+      if (!res || res.resourceType !== 'StructureDefinition') continue;
+      if (res.kind !== 'resource' && res.kind !== 'complex-type') continue;
+
+      const name = res.name || res.id;
+      if (!name) continue;
+
+      const elements = res.snapshot?.element || res.differential?.element || [];
+      const elementsByPath = {};
+      for (const el of elements) {
+        if (el.path) elementsByPath[el.path] = el;
+      }
+
+      resources[name] = { sd: res, elements, elementsByPath };
+    }
+
+    return { version, baseUrl, resources };
+  }
+
+  // ═══════════════════════════════════════════
+  //  ZIP LOADING
+  // ═══════════════════════════════════════════
   loadFileBtn.addEventListener('click', () => fileInput.click());
 
   fileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    statusMsg.textContent = 'Parsing schema…';
-    loadFileBtn.style.display = 'none';
+    const overlay = showOverlay('Extracting ZIP…');
 
     try {
-      const text = await file.text();
-      const data = JSON.parse(text);
+      const zip = await JSZip.loadAsync(file);
 
-      if (!data.definitions) {
-        throw new Error('Invalid schema: no "definitions" key found.');
+      // Find the profiles-resources and profiles-types bundles
+      let resourceBundle = null;
+      let typesBundle = null;
+
+      for (const [filename, zipEntry] of Object.entries(zip.files)) {
+        if (zipEntry.dir) continue;
+        const fn = filename.toLowerCase();
+        if (fn.includes('profiles-resources') && fn.endsWith('.json')) {
+          overlay.querySelector('.loading-text').textContent = 'Parsing resource profiles…';
+          const text = await zipEntry.async('string');
+          resourceBundle = JSON.parse(text);
+        } else if (fn.includes('profiles-types') && fn.endsWith('.json')) {
+          overlay.querySelector('.loading-text').textContent = 'Parsing type profiles…';
+          const text = await zipEntry.async('string');
+          typesBundle = JSON.parse(text);
+        }
       }
 
-      schemaCache[currentVersion] = data;
-      currentSchema = data;
-      onSchemaReady();
-    } catch (err) {
-      statusMsg.textContent = `Error: ${err.message}`;
-      loadFileBtn.style.display = 'inline-block';
-    }
+      if (!resourceBundle && !typesBundle) {
+        throw new Error('No profiles-resources.json or profiles-types.json found in ZIP.');
+      }
 
-    // Reset so the same file can be re-selected
+      overlay.querySelector('.loading-text').textContent = 'Building index…';
+
+      // Merge both bundles
+      const mergedBundle = { entry: [] };
+      if (resourceBundle?.entry) mergedBundle.entry.push(...resourceBundle.entry);
+      if (typesBundle?.entry) mergedBundle.entry.push(...typesBundle.entry);
+
+      // Detect version from whichever bundle we have
+      const sampleBundle = resourceBundle || typesBundle;
+      mergedBundle._fhirVersion = sampleBundle;
+
+      const processed = processBundle(mergedBundle);
+      // Re-detect version from the actual bundle
+      processed.version = detectVersion(sampleBundle);
+      processed.baseUrl = versionBaseUrl(processed.version);
+
+      versions[processed.version] = processed;
+      await setCache(processed.version, { resourceBundle, typesBundle });
+
+      overlay.remove();
+      rebuildVersionDropdown(processed.version);
+      activateVersion(processed.version);
+      showToast(`${processed.version} loaded — ${Object.keys(processed.resources).length} definitions cached ✓`);
+
+    } catch (err) {
+      overlay.remove();
+      statusMsg.textContent = `Error: ${err.message}`;
+      console.error(err);
+    }
     fileInput.value = '';
   });
 
-  // ── Schema ready ──
-  function onSchemaReady() {
-    const defs = currentSchema.definitions || {};
-    const allNames = Object.keys(defs).sort();
-
-    resourceNames = allNames.filter(n => {
-      const def = defs[n];
-      if (KNOWN_RESOURCES.has(n)) return true;
-      if (def && def.properties && def.properties.resourceType) return true;
-      return false;
-    });
-
-    complexTypes = allNames.filter(n => !resourceNames.includes(n));
-
-    statusMsg.textContent = `${currentVersion}: ${resourceNames.length} resources, ${complexTypes.length} types`;
-    searchInput.disabled = false;
-    searchInput.focus();
+  // ═══════════════════════════════════════════
+  //  OVERLAY
+  // ═══════════════════════════════════════════
+  function showOverlay(text) {
+    const overlay = document.createElement('div');
+    overlay.className = 'loading-overlay';
+    overlay.innerHTML = `<div class="spinner"></div><div class="loading-text">${text || 'Loading…'}</div>`;
+    mainArea.appendChild(overlay);
+    return overlay;
   }
 
-  // ── Search / Dropdown ──
+  // ═══════════════════════════════════════════
+  //  VERSION DROPDOWN
+  // ═══════════════════════════════════════════
+  function rebuildVersionDropdown(selectVersion) {
+    const keys = Object.keys(versions).sort();
+    versionSelect.innerHTML = '';
+
+    if (!keys.length) {
+      const opt = document.createElement('option');
+      opt.value = ''; opt.textContent = '— no definitions loaded —';
+      versionSelect.appendChild(opt);
+      versionSelect.disabled = true;
+      return;
+    }
+
+    keys.forEach(k => {
+      const opt = document.createElement('option');
+      opt.value = k; opt.textContent = k;
+      versionSelect.appendChild(opt);
+    });
+    versionSelect.disabled = keys.length < 2;
+
+    if (selectVersion && keys.includes(selectVersion)) versionSelect.value = selectVersion;
+    else versionSelect.value = keys[0];
+  }
+
+  function activateVersion(versionLabel) {
+    currentVersion = versionLabel;
+    currentData = versions[versionLabel];
+
+    const res = currentData.resources;
+    resourceNames = Object.keys(res).filter(n => {
+      const sd = res[n].sd;
+      return sd.kind === 'resource';
+    }).sort();
+
+    statusMsg.innerHTML = `${versionLabel}: ${resourceNames.length} resources <span class="cached-badge">cached</span>`;
+    searchInput.disabled = false;
+    searchInput.placeholder = 'Search resources (e.g. Patient, Observation…)';
+    searchInput.value = '';
+    searchInput.focus();
+    clearCacheBtn.style.display = 'inline-block';
+
+    treeRoot.innerHTML = '';
+    treeRoot.style.display = 'none';
+    closeDetail();
+    
+    instructions.innerHTML = `
+      <div style="font-size:48px;margin-bottom:12px;">🌳</div>
+      <div><strong>Select a FHIR resource</strong> to explore its structure.</div>
+      <div style="margin-top:6px;font-size:13px;">Search above or load another version with 📂.</div>
+            <h2>Download links</h2>
+      <div class="dl-links">
+        <a href="https://hl7.org/fhir/R4/definitions.json.zip" target="_blank">⬇ R4 (4.0.1) — definitions.json.zip</a><br>
+        <a href="https://hl7.org/fhir/R4B/definitions.json.zip" target="_blank">⬇ R4B (4.3.0) — definitions.json.zip</a><br>
+        <a href="https://hl7.org/fhir/R5/definitions.json.zip" target="_blank">⬇ R5 (5.0.0) — definitions.json.zip</a>
+      </div>
+
+    `;
+    
+    treeEmpty.style.display = 'flex';
+  }
+
+  versionSelect.addEventListener('change', () => {
+    const v = versionSelect.value;
+    if (v && versions[v]) activateVersion(v);
+  });
+
+  // ═══════════════════════════════════════════
+  //  CLEAR CACHE
+  // ═══════════════════════════════════════════
+  clearCacheBtn.addEventListener('click', async () => {
+    await clearCacheAll();
+    versions = {}; currentData = null; currentVersion = '';
+    resourceNames = []; selectedNode = null;
+    treeRoot.innerHTML = ''; treeRoot.style.display = 'none';
+    closeDetail();
+    searchInput.disabled = true; searchInput.value = '';
+    searchInput.placeholder = 'Load definitions to begin…';
+    clearCacheBtn.style.display = 'none';
+    rebuildVersionDropdown();
+    statusMsg.textContent = '';
+    showWelcome();
+    showToast('Cache cleared');
+  });
+
+  function showWelcome() {
+    instructions.innerHTML = `
+      <div style="font-size:48px;margin-bottom:12px;">📂</div>
+      <div><strong>Load FHIR definitions</strong> to get started.</div>
+      <div style="margin-top:12px;font-size:13px;">
+        Download <code>definitions.json.zip</code> for the version you need,<br>
+        then click <strong>📂 Load definitions ZIP</strong>.
+      </div>
+      <h2>Download links</h2>
+      <div class="dl-links">
+        <a href="https://hl7.org/fhir/R4/definitions.json.zip" target="_blank">⬇ R4 (4.0.1) — definitions.json.zip</a><br>
+        <a href="https://hl7.org/fhir/R4B/definitions.json.zip" target="_blank">⬇ R4B (4.3.0) — definitions.json.zip</a><br>
+        <a href="https://hl7.org/fhir/R5/definitions.json.zip" target="_blank">⬇ R5 (5.0.0) — definitions.json.zip</a>
+      </div>
+      <div style="margin-top:12px;font-size:13px;color:var(--text-muted);">
+        Definitions are cached in your browser — you only need to load each version once.
+      </div>
+    `;
+    treeEmpty.style.display = 'flex';
+  }
+
+  // ═══════════════════════════════════════════
+  //  ELEMENT HELPERS
+  // ═══════════════════════════════════════════
+  function getElement(resourceName, fhirPath) {
+    const res = currentData?.resources?.[resourceName];
+    if (!res) return null;
+    return res.elementsByPath?.[fhirPath] || null;
+  }
+
+  function getChildElements(resourceName, parentPath) {
+    const res = currentData?.resources?.[resourceName];
+    if (!res) return [];
+
+    const prefix = parentPath + '.';
+    const children = [];
+    const seen = new Set();
+
+    for (const el of res.elements) {
+      if (!el.path.startsWith(prefix)) continue;
+      const remainder = el.path.slice(prefix.length);
+      // Direct children only (no dots in remainder)
+      if (remainder.includes('.')) continue;
+      if (seen.has(el.path)) continue;
+      seen.add(el.path);
+      children.push(el);
+    }
+
+    return children;
+  }
+
+  function getElementName(el) {
+    const parts = el.path.split('.');
+    return parts[parts.length - 1];
+  }
+
+  function getElementTypeBadge(el) {
+    const types = el.type || [];
+    if (!types.length) {
+      // BackboneElement — has child elements
+      if (el.path && getChildElements(el.path.split('.')[0], el.path).length > 0) {
+        return { cls: 'backbone', label: '{}' };
+      }
+      return { cls: 'obj', label: '{}' };
+    }
+
+    const firstType = types[0].code;
+    if (firstType === 'Reference') return { cls: 'ref', label: '→' };
+    if (firstType === 'CodeableConcept' || firstType === 'Coding' || firstType === 'code') return { cls: 'enum', label: 'C' };
+    if (firstType === 'string' || firstType === 'uri' || firstType === 'url' || firstType === 'canonical' ||
+        firstType === 'markdown' || firstType === 'id' || firstType === 'oid' || firstType === 'uuid') return { cls: 'str', label: 'S' };
+    if (firstType === 'integer' || firstType === 'decimal' || firstType === 'positiveInt' ||
+        firstType === 'unsignedInt' || firstType === 'integer64') return { cls: 'num', label: '#' };
+    if (firstType === 'boolean') return { cls: 'bool', label: 'B' };
+    if (firstType === 'BackboneElement' || firstType === 'Element') return { cls: 'backbone', label: '{}' };
+    if (el.max === '*') return { cls: 'arr', label: '[]' };
+    return { cls: 'obj', label: '{}' };
+  }
+
+  function getElementTypeLabel(el) {
+    const types = el.type || [];
+    if (!types.length) return 'BackboneElement';
+    if (types.length === 1) return types[0].code;
+    return types.map(t => t.code).join(' | ');
+  }
+
+  function getBindingColor(strength) {
+    switch ((strength || '').toLowerCase()) {
+      case 'required': return 'var(--binding-required)';
+      case 'extensible': return 'var(--binding-extensible)';
+      case 'preferred': return 'var(--binding-preferred)';
+      case 'example': return 'var(--binding-example)';
+      default: return 'var(--text-muted)';
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  //  SEARCH / DROPDOWN
+  // ═══════════════════════════════════════════
   let dropdownIndex = -1;
 
   function renderDropdown(filter) {
     const f = filter.toLowerCase();
-    let matchedRes = resourceNames.filter(n => n.toLowerCase().includes(f));
-    const matchedTypes = complexTypes.filter(n => n.toLowerCase().includes(f));
+    let matched = resourceNames.filter(n => n.toLowerCase().includes(f));
+    if (!f) matched = [...resourceNames];
+    if (!matched.length) { dropdown.classList.remove('open'); return; }
 
-    if (!f && !matchedRes.length && !matchedTypes.length) {
-      matchedRes = [...resourceNames];
-    }
-
-    if (!matchedRes.length && !matchedTypes.length) {
-      dropdown.classList.remove('open');
-      return;
-    }
-
-    let html = '';
-    if (matchedRes.length) {
-      html += '<div class="dropdown-group-label">Resources</div>';
-      matchedRes.forEach((n, i) => {
-        html += `<div class="dropdown-item" data-name="${n}" data-idx="${i}">${highlight(n, f)}</div>`;
-      });
-    }
-    if (matchedTypes.length) {
-      html += '<div class="dropdown-group-label">Complex Types</div>';
-      matchedTypes.slice(0, 80).forEach((n, i) => {
-        html += `<div class="dropdown-item" data-name="${n}" data-idx="${matchedRes.length + i}">${highlight(n, f)}</div>`;
-      });
-      if (matchedTypes.length > 80) {
-        html += `<div class="dropdown-item" style="color:var(--text-muted);cursor:default;font-style:italic;">… and ${matchedTypes.length - 80} more</div>`;
-      }
-    }
+    let html = '<div class="dropdown-group-label">Resources</div>';
+    matched.forEach((n, i) => {
+      const sd = currentData.resources[n]?.sd;
+      const desc = sd?.description || '';
+      const shortDesc = desc.length > 80 ? desc.slice(0, 80) + '…' : desc;
+      html += `<div class="dropdown-item" data-name="${n}" data-idx="${i}">
+        ${hlText(n, f)}
+        ${shortDesc ? `<span class="item-desc">${shortDesc}</span>` : ''}
+      </div>`;
+    });
 
     dropdown.innerHTML = html;
     dropdown.classList.add('open');
@@ -707,11 +765,11 @@
     });
   }
 
-  function highlight(text, query) {
-    if (!query) return text;
-    const idx = text.toLowerCase().indexOf(query);
-    if (idx < 0) return text;
-    return text.slice(0, idx) + '<strong>' + text.slice(idx, idx + query.length) + '</strong>' + text.slice(idx + query.length);
+  function hlText(text, q) {
+    if (!q) return text;
+    const i = text.toLowerCase().indexOf(q);
+    if (i < 0) return text;
+    return text.slice(0, i) + '<strong>' + text.slice(i, i + q.length) + '</strong>' + text.slice(i + q.length);
   }
 
   searchInput.addEventListener('input', () => {
@@ -719,18 +777,13 @@
     clearBtn.classList.toggle('visible', v.length > 0);
     renderDropdown(v);
   });
-
   searchInput.addEventListener('focus', () => {
     if (resourceNames.length) renderDropdown(searchInput.value.trim());
   });
-
   clearBtn.addEventListener('click', () => {
-    searchInput.value = '';
-    clearBtn.classList.remove('visible');
-    dropdown.classList.remove('open');
-    searchInput.focus();
+    searchInput.value = ''; clearBtn.classList.remove('visible');
+    dropdown.classList.remove('open'); searchInput.focus();
   });
-
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.search-wrapper')) dropdown.classList.remove('open');
   });
@@ -738,226 +791,149 @@
   searchInput.addEventListener('keydown', (e) => {
     const items = dropdown.querySelectorAll('.dropdown-item[data-name]');
     if (!items.length) return;
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      dropdownIndex = Math.min(dropdownIndex + 1, items.length - 1);
-      updateDropdownHighlight(items);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      dropdownIndex = Math.max(dropdownIndex - 1, 0);
-      updateDropdownHighlight(items);
-    } else if (e.key === 'Enter' && dropdownIndex >= 0) {
-      e.preventDefault();
-      items[dropdownIndex].click();
-    } else if (e.key === 'Escape') {
-      dropdown.classList.remove('open');
-    }
+    if (e.key === 'ArrowDown') { e.preventDefault(); dropdownIndex = Math.min(dropdownIndex + 1, items.length - 1); updateDDHL(items); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); dropdownIndex = Math.max(dropdownIndex - 1, 0); updateDDHL(items); }
+    else if (e.key === 'Enter' && dropdownIndex >= 0) { e.preventDefault(); items[dropdownIndex].click(); }
+    else if (e.key === 'Escape') { dropdown.classList.remove('open'); }
   });
 
-  function updateDropdownHighlight(items) {
+  function updateDDHL(items) {
     items.forEach((el, i) => el.classList.toggle('active', i === dropdownIndex));
     if (items[dropdownIndex]) items[dropdownIndex].scrollIntoView({ block: 'nearest' });
   }
 
-  // ── Version change ──
-  versionSelect.addEventListener('change', () => {
-    currentVersion = versionSelect.value;
-    treeRoot.innerHTML = '';
-    treeRoot.style.display = 'none';
-    treeEmpty.style.display = 'flex';
-    closeDetail();
-    loadSchema(currentVersion);
-  });
-
-  // ── Schema resolution helpers ──
-  function resolveRef(ref) {
-    if (!ref || !currentSchema) return null;
-    const path = ref.replace('#/definitions/', '');
-    return currentSchema.definitions?.[path] || null;
-  }
-
-  function getEffectiveSchema(schema) {
-    if (!schema) return null;
-    if (schema.$ref) return resolveRef(schema.$ref);
-    if (schema.items && schema.items.$ref) return resolveRef(schema.items.$ref);
-    return schema;
-  }
-
-  function getTypeName(schema) {
-    if (!schema) return 'unknown';
-    if (schema.$ref) return schema.$ref.replace('#/definitions/', '');
-    if (schema.enum) return 'enum';
-    if (schema.const !== undefined) return `"${schema.const}"`;
-    if (schema.type === 'array' && schema.items) {
-      return getTypeName(schema.items) + '[]';
-    }
-    return schema.type || 'object';
-  }
-
-  function getTypeBadge(schema) {
-    if (!schema) return { cls: 'obj', label: '{}' };
-    if (schema.enum) return { cls: 'enum', label: 'E' };
-    if (schema.$ref) {
-      const refName = schema.$ref.replace('#/definitions/', '');
-      if (refName === 'Reference') return { cls: 'ref', label: '→' };
-      return { cls: 'obj', label: '{}' };
-    }
-    if (schema.type === 'array') return { cls: 'arr', label: '[]' };
-    if (schema.type === 'string') return { cls: 'str', label: 'S' };
-    if (schema.type === 'number' || schema.type === 'integer') return { cls: 'num', label: '#' };
-    if (schema.type === 'boolean') return { cls: 'bool', label: 'B' };
-    return { cls: 'obj', label: '{}' };
-  }
-
-  function hasChildren(schema) {
-    const eff = getEffectiveSchema(schema);
-    if (!eff) return false;
-    if (eff.properties) return true;
-    if (eff.type === 'array' && eff.items) return hasChildren(eff.items);
-    return false;
-  }
-
-  function getChildren(schema) {
-    const eff = getEffectiveSchema(schema);
-    if (!eff) return {};
-    if (eff.properties) return eff.properties;
-    if (eff.type === 'array' && eff.items) return getChildren(eff.items);
-    return {};
-  }
-
-  function getRequired(schema) {
-    const eff = getEffectiveSchema(schema);
-    if (!eff) return [];
-    return eff.required || [];
-  }
-
-  function getCardinality(propName, parentSchema, propSchema) {
-    const req = getRequired(parentSchema);
-    const isRequired = req.includes(propName);
-    const isArray = propSchema?.type === 'array';
-    if (isArray) return isRequired ? '1..*' : '0..*';
-    return isRequired ? '1..1' : '0..1';
-  }
-
-  // ── Tree rendering ──
+  // ═══════════════════════════════════════════
+  //  TREE RENDERING
+  // ═══════════════════════════════════════════
   function selectResource(name) {
     dropdown.classList.remove('open');
     searchInput.value = name;
     clearBtn.classList.add('visible');
 
-    const def = currentSchema.definitions?.[name];
-    if (!def) return;
+    if (!currentData?.resources?.[name]) return;
 
     treeEmpty.style.display = 'none';
     treeRoot.style.display = 'block';
     treeRoot.innerHTML = '';
     closeDetail();
 
-    const rootNode = createTreeNode(name, { $ref: `#/definitions/${name}` }, null, name, true);
+    const rootEl = getElement(name, name);
+    const rootNode = createTreeNode(name, name, rootEl, true);
     treeRoot.appendChild(rootNode);
 
     // Auto-expand root
-    const toggle = rootNode.querySelector('.toggle-icon');
-    if (toggle && !toggle.classList.contains('leaf')) {
-      expandNode(rootNode, name, { $ref: `#/definitions/${name}` });
-      toggle.classList.add('expanded');
+    const tog = rootNode.querySelector('.toggle-icon');
+    if (tog && !tog.classList.contains('leaf')) {
+      expandNode(rootNode, name, name);
+      tog.classList.add('expanded');
     }
   }
 
-  function createTreeNode(propName, propSchema, parentSchema, fhirPath, isRoot) {
+  function createTreeNode(resourceName, fhirPath, element, isRoot) {
     const node = document.createElement('div');
     node.className = 'tree-node';
 
     const row = document.createElement('div');
     row.className = 'node-row';
 
-    const canExpand = hasChildren(propSchema);
-    const badge = getTypeBadge(propSchema);
-    const typeName = getTypeName(propSchema);
-    const cardinality = parentSchema ? getCardinality(propName, parentSchema, propSchema) : '';
-    const isRequired = parentSchema ? getRequired(parentSchema).includes(propName) : false;
+    const elName = isRoot ? resourceName : getElementName(element);
+    const children = getChildElements(resourceName, fhirPath);
+    const canExpand = children.length > 0;
+    const badge = element ? getElementTypeBadge(element) : { cls: 'obj', label: '{}' };
+    const typeLabel = element ? getElementTypeLabel(element) : '';
+    const card = element && !isRoot ? `${element.min || 0}..${element.max || '*'}` : '';
+    const isReq = element && parseInt(element.min) > 0;
+    const shortDesc = element?.short || '';
+    const hasBinding = !!element?.binding;
 
-    // Toggle icon
-    const toggleEl = document.createElement('span');
-    toggleEl.className = 'toggle-icon' + (canExpand ? '' : ' leaf');
-    toggleEl.textContent = '▶';
-    row.appendChild(toggleEl);
+    // Toggle
+    const tog = document.createElement('span');
+    tog.className = 'toggle-icon' + (canExpand ? '' : ' leaf');
+    tog.textContent = '▶';
+    row.appendChild(tog);
 
     // Required dot
-    if (isRequired) {
+    if (isReq && !isRoot) {
       const dot = document.createElement('span');
-      dot.className = 'required-dot';
-      dot.title = 'Required';
+      dot.className = 'required-dot'; dot.title = 'Required';
       row.appendChild(dot);
     }
 
-    // Type badge
-    const badgeEl = document.createElement('span');
-    badgeEl.className = `type-badge ${badge.cls}`;
-    badgeEl.textContent = badge.label;
-    row.appendChild(badgeEl);
+    // Binding dot
+    if (hasBinding) {
+      const bdot = document.createElement('span');
+      bdot.className = 'node-binding-dot';
+      bdot.style.background = getBindingColor(element.binding.strength);
+      bdot.title = `Binding: ${element.binding.strength || 'unknown'}`;
+      row.appendChild(bdot);
+    }
+
+    // Badge
+    const b = document.createElement('span');
+    b.className = `type-badge ${badge.cls}`;
+    b.textContent = badge.label;
+    row.appendChild(b);
 
     // Name
-    const nameEl = document.createElement('span');
-    nameEl.className = 'node-name';
-    nameEl.textContent = propName;
-    row.appendChild(nameEl);
+    const nm = document.createElement('span');
+    nm.className = 'node-name';
+    nm.textContent = elName;
+    row.appendChild(nm);
 
     // Type label
-    if (!isRoot) {
-      const typeEl = document.createElement('span');
-      typeEl.className = 'node-type-label';
-      typeEl.textContent = typeName;
-      row.appendChild(typeEl);
+    if (!isRoot && typeLabel) {
+      const tl = document.createElement('span');
+      tl.className = 'node-type-label';
+      tl.textContent = typeLabel;
+      row.appendChild(tl);
     }
 
     // Cardinality
-    if (cardinality) {
-      const cardEl = document.createElement('span');
-      cardEl.className = 'node-cardinality';
-      cardEl.textContent = cardinality;
-      row.appendChild(cardEl);
+    if (card) {
+      const c = document.createElement('span');
+      c.className = 'node-cardinality';
+      c.textContent = card;
+      row.appendChild(c);
     }
 
-    // Action buttons
+    // Short description
+    if (shortDesc && !isRoot) {
+      const sd = document.createElement('span');
+      sd.className = 'node-short';
+      sd.textContent = shortDesc;
+      row.appendChild(sd);
+    }
+
+    // Actions
     const actions = document.createElement('span');
     actions.className = 'node-actions';
 
     const infoBtn = document.createElement('button');
-    infoBtn.textContent = 'ℹ️ Info';
-    infoBtn.title = 'Show details';
+    infoBtn.textContent = 'ℹ️ Info'; infoBtn.title = 'Show details';
     infoBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      showDetail(propName, propSchema, parentSchema, fhirPath, cardinality, isRequired);
+      showDetail(resourceName, fhirPath, element, isRoot);
       highlightRow(row);
     });
     actions.appendChild(infoBtn);
 
     const pathBtn = document.createElement('button');
-    pathBtn.textContent = '📋 Path';
-    pathBtn.title = 'Copy FHIR path';
+    pathBtn.textContent = '📋 Path'; pathBtn.title = 'Copy FHIR path';
     pathBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       copyToClipboard(fhirPath);
     });
     actions.appendChild(pathBtn);
-
     row.appendChild(actions);
 
     // Click handler
     row.addEventListener('click', () => {
       if (canExpand) {
         const childrenEl = node.querySelector(':scope > .tree-children');
-        if (childrenEl) {
-          childrenEl.remove();
-          toggleEl.classList.remove('expanded');
-        } else {
-          expandNode(node, fhirPath, propSchema);
-          toggleEl.classList.add('expanded');
-        }
+        if (childrenEl) { childrenEl.remove(); tog.classList.remove('expanded'); }
+        else { expandNode(node, resourceName, fhirPath); tog.classList.add('expanded'); }
       }
-      showDetail(propName, propSchema, parentSchema, fhirPath, cardinality, isRequired);
+      showDetail(resourceName, fhirPath, element, isRoot);
       highlightRow(row);
     });
 
@@ -965,22 +941,19 @@
     return node;
   }
 
-  function expandNode(nodeEl, parentPath, parentSchemaRef) {
-    const children = getChildren(parentSchemaRef);
-    const childNames = Object.keys(children);
-    if (!childNames.length) return;
+  function expandNode(nodeEl, resourceName, parentPath) {
+    const children = getChildElements(resourceName, parentPath);
+    if (!children.length) return;
 
     const container = document.createElement('div');
     container.className = 'tree-children';
 
-    childNames.sort().forEach(name => {
-      if (name.startsWith('_')) return;
+    children.sort((a, b) => getElementName(a).localeCompare(getElementName(b)));
 
-      const childSchema = children[name];
-      const childPath = parentPath + '.' + name;
-      const childNode = createTreeNode(name, childSchema, parentSchemaRef, childPath, false);
+    for (const childEl of children) {
+      const childNode = createTreeNode(resourceName, childEl.path, childEl, false);
       container.appendChild(childNode);
-    });
+    }
 
     nodeEl.appendChild(container);
   }
@@ -991,13 +964,18 @@
     selectedNode = row;
   }
 
-  // ── Detail panel ──
-  function showDetail(propName, propSchema, parentSchema, fhirPath, cardinality, isRequired) {
-    detailTitle.textContent = propName;
+  // ═══════════════════════════════════════════
+  //  DETAIL PANEL
+  // ═══════════════════════════════════════════
+  function showDetail(resourceName, fhirPath, element, isRoot) {
+    const elName = isRoot ? resourceName : getElementName(element);
+    detailTitle.textContent = elName;
     detailBody.innerHTML = '';
 
-    // Path
-    addDetailSection('FHIR Path', () => {
+    const baseUrl = currentData.baseUrl;
+
+    // FHIR Path
+    addSection('FHIR Path', () => {
       const row = document.createElement('div');
       row.className = 'path-copy-row';
       const code = document.createElement('code');
@@ -1010,107 +988,234 @@
       return row;
     });
 
-    // Type
-    const typeName = getTypeName(propSchema);
-    addDetailSection('Type', () => {
-      const span = document.createElement('span');
-      span.className = 'value';
-      span.textContent = typeName;
-      return span;
-    });
+    if (!element) { detailPanel.classList.add('open'); return; }
+
+    // Short description
+    if (element.short) {
+      addSection('Short', () => makeValue(element.short));
+    }
+
+    // Definition
+    if (element.definition) {
+      addSection('Definition', () => makeValue(element.definition));
+    }
+
+    // Type(s)
+    if (element.type && element.type.length) {
+      addSection('Type(s)', () => {
+        const div = document.createElement('div');
+        div.className = 'type-list';
+        for (const t of element.type) {
+          const entry = document.createElement('div');
+          entry.className = 'type-entry';
+
+          const codeSpan = document.createElement('span');
+          codeSpan.className = 'type-code';
+          codeSpan.textContent = t.code;
+          entry.appendChild(codeSpan);
+
+          // Target profiles for Reference
+          const profiles = t.targetProfile || t.profile || [];
+          if (profiles.length) {
+            const profSpan = document.createElement('span');
+            profSpan.className = 'type-profiles';
+            const names = profiles.map(p => {
+              const parts = p.split('/');
+              return parts[parts.length - 1];
+            });
+            profSpan.textContent = '(' + names.join(', ') + ')';
+            entry.appendChild(profSpan);
+          }
+
+          div.appendChild(entry);
+        }
+        return div;
+      });
+    }
 
     // Cardinality
-    if (cardinality) {
-      addDetailSection('Cardinality', () => {
-        const span = document.createElement('span');
-        span.className = 'value';
-        span.textContent = cardinality + (isRequired ? ' (required)' : ' (optional)');
-        return span;
+    if (!isRoot) {
+      addSection('Cardinality', () => {
+        const min = element.min ?? 0;
+        const max = element.max ?? '*';
+        const text = `${min}..${max}`;
+        const reqLabel = min > 0 ? ' (required)' : ' (optional)';
+        return makeValue(text + reqLabel);
       });
     }
 
-    // Description
-    const eff = getEffectiveSchema(propSchema);
-    if (eff?.description) {
-      addDetailSection('Description', () => {
-        const p = document.createElement('span');
-        p.className = 'value';
-        p.textContent = eff.description;
-        return p;
+    // Binding
+    if (element.binding) {
+      addSection('Binding', () => {
+        const div = document.createElement('div');
+
+        // Strength badge
+        const strength = element.binding.strength || 'unknown';
+        const badge = document.createElement('span');
+        badge.className = `binding-badge ${strength.toLowerCase()}`;
+        badge.textContent = strength;
+        div.appendChild(badge);
+
+        // Description
+        if (element.binding.description) {
+          const desc = document.createElement('span');
+          desc.className = 'value';
+          desc.textContent = element.binding.description;
+          div.appendChild(desc);
+        }
+
+        // ValueSet link
+        const vsUrl = element.binding.valueSet;
+        if (vsUrl) {
+          const cleanUrl = vsUrl.split('|')[0]; // Remove version suffix
+          const vsName = cleanUrl.split('/').pop();
+
+          const p = document.createElement('div');
+          p.style.marginTop = '6px';
+
+          const link = document.createElement('a');
+          link.className = 'detail-link';
+          link.textContent = `📖 ${vsName}`;
+          link.href = cleanUrl;
+          link.target = '_blank';
+          link.rel = 'noopener';
+          p.appendChild(link);
+
+          div.appendChild(p);
+        }
+
+        return div;
       });
     }
 
-    // Enum values
-    if (propSchema?.enum || eff?.enum) {
-      const vals = propSchema?.enum || eff?.enum;
-      addDetailSection('Allowed Values', () => {
-        const list = document.createElement('div');
-        list.className = 'enum-list';
-        vals.forEach(v => {
+    // Comments
+    if (element.comment) {
+      addSection('Comments', () => makeValue(element.comment));
+    }
+
+    // Requirements
+    if (element.requirements) {
+      addSection('Requirements', () => makeValue(element.requirements));
+    }
+
+    // Aliases
+    if (element.alias && element.alias.length) {
+      addSection('Aliases', () => {
+        const div = document.createElement('div');
+        div.className = 'enum-list';
+        element.alias.forEach(a => {
           const s = document.createElement('span');
-          s.textContent = v;
-          list.appendChild(s);
+          s.textContent = a;
+          div.appendChild(s);
         });
-        return list;
+        return div;
       });
     }
 
-    // Pattern
-    if (eff?.pattern) {
-      addDetailSection('Pattern (Regex)', () => {
-        const code = document.createElement('code');
-        code.style.cssText = 'background:var(--bg);padding:4px 8px;border-radius:4px;font-size:12px;display:block;word-break:break-all;';
-        code.textContent = eff.pattern;
-        return code;
-      });
-    }
-
-    // Ref target
-    if (propSchema?.$ref) {
-      addDetailSection('Schema Reference', () => {
-        const span = document.createElement('span');
-        span.className = 'value';
-        span.textContent = propSchema.$ref.replace('#/definitions/', '');
-        span.style.color = 'var(--primary)';
-        span.style.cursor = 'pointer';
-        span.addEventListener('click', () => {
-          const refName = propSchema.$ref.replace('#/definitions/', '');
-          selectResource(refName);
+    // Fixed value
+    for (const key of Object.keys(element)) {
+      if (key.startsWith('fixed') || key.startsWith('pattern') || key.startsWith('defaultValue')) {
+        addSection(key, () => {
+          const code = document.createElement('code');
+          code.style.cssText = 'background:var(--bg);padding:4px 8px;border-radius:4px;font-size:12px;display:block;word-break:break-all;';
+          code.textContent = typeof element[key] === 'object' ? JSON.stringify(element[key], null, 2) : String(element[key]);
+          return code;
         });
-        return span;
+      }
+    }
+
+    // Constraints
+    if (element.constraint && element.constraint.length) {
+      addSection('Constraints', () => {
+        const div = document.createElement('div');
+        div.className = 'constraint-list';
+        for (const c of element.constraint) {
+          const item = document.createElement('div');
+          item.className = 'constraint-item';
+
+          const key = document.createElement('span');
+          key.className = 'constraint-key';
+          key.textContent = c.key || '';
+          item.appendChild(key);
+
+          if (c.severity) {
+            const sev = document.createElement('span');
+            sev.className = `constraint-severity ${c.severity}`;
+            sev.textContent = c.severity;
+            item.appendChild(sev);
+          }
+
+          const human = document.createElement('span');
+          human.textContent = c.human || c.expression || '';
+          item.appendChild(human);
+
+          div.appendChild(item);
+        }
+        return div;
       });
     }
 
-    // Array item ref
-    if (propSchema?.type === 'array' && propSchema?.items?.$ref) {
-      addDetailSection('Array Item Type', () => {
-        const span = document.createElement('span');
-        span.className = 'value';
-        const refName = propSchema.items.$ref.replace('#/definitions/', '');
-        span.textContent = refName;
-        span.style.color = 'var(--primary)';
-        span.style.cursor = 'pointer';
-        span.addEventListener('click', () => selectResource(refName));
-        return span;
+    // Mapping
+    if (element.mapping && element.mapping.length) {
+      addSection('Mappings', () => {
+        const div = document.createElement('div');
+        div.className = 'constraint-list';
+        for (const m of element.mapping) {
+          const item = document.createElement('div');
+          item.className = 'constraint-item';
+          const id = document.createElement('span');
+          id.className = 'constraint-key';
+          id.textContent = m.identity || '';
+          item.appendChild(id);
+          const map = document.createElement('span');
+          map.textContent = m.map || '';
+          item.appendChild(map);
+          div.appendChild(item);
+        }
+        return div;
       });
     }
 
-    // Properties count
-    const childProps = getChildren(propSchema);
-    const childCount = Object.keys(childProps).filter(k => !k.startsWith('_')).length;
-    if (childCount > 0) {
-      addDetailSection('Child Properties', () => {
-        const span = document.createElement('span');
-        span.className = 'value';
-        span.textContent = `${childCount} properties`;
-        return span;
+    // Must-support
+    if (element.mustSupport) {
+      addSection('Must Support', () => makeValue('Yes ✓'));
+    }
+
+    // Is modifier
+    if (element.isModifier) {
+      addSection('Is Modifier', () => {
+        const text = 'Yes' + (element.isModifierReason ? ` — ${element.isModifierReason}` : '');
+        return makeValue(text);
       });
     }
+
+    // Is summary
+    if (element.isSummary) {
+      addSection('Is Summary', () => makeValue('Yes'));
+    }
+
+    // Child count
+    const children = getChildElements(resourceName, fhirPath);
+    if (children.length) {
+      addSection('Child Elements', () => makeValue(`${children.length} elements`));
+    }
+
+    // Link to HL7 spec
+    addSection('Specification', () => {
+      const link = document.createElement('a');
+      link.className = 'detail-link';
+      const resName = fhirPath.split('.')[0].toLowerCase();
+      link.href = `${baseUrl}/${resName}-definitions.html#${fhirPath}`;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = `🔗 View on hl7.org`;
+      return link;
+    });
 
     detailPanel.classList.add('open');
   }
 
-  function addDetailSection(label, contentFn) {
+  function addSection(label, contentFn) {
     const section = document.createElement('div');
     section.className = 'detail-section';
     const lbl = document.createElement('label');
@@ -1120,28 +1225,29 @@
     detailBody.appendChild(section);
   }
 
-  function closeDetail() {
-    detailPanel.classList.remove('open');
-    if (selectedNode) {
-      selectedNode.classList.remove('selected');
-      selectedNode = null;
-    }
+  function makeValue(text) {
+    const span = document.createElement('span');
+    span.className = 'value';
+    span.textContent = text;
+    return span;
   }
 
-  detailClose.addEventListener('click', closeDetail);
+  function closeDetail() {
+    detailPanel.classList.remove('open');
+    if (selectedNode) { selectedNode.classList.remove('selected'); selectedNode = null; }
+  }
 
-  // ── Clipboard ──
+  detailCloseEl.addEventListener('click', closeDetail);
+
+  // ═══════════════════════════════════════════
+  //  CLIPBOARD & TOAST
+  // ═══════════════════════════════════════════
   function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-      showToast(`Copied: ${text}`);
-    }).catch(() => {
+    navigator.clipboard.writeText(text).then(() => showToast(`Copied: ${text}`)).catch(() => {
       const ta = document.createElement('textarea');
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      showToast(`Copied: ${text}`);
+      ta.value = text; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta); showToast(`Copied: ${text}`);
     });
   }
 
@@ -1151,8 +1257,45 @@
     setTimeout(() => toastEl.classList.remove('show'), 2000);
   }
 
-  // ── Init ──
-  loadSchema(currentVersion);
+  // ═══════════════════════════════════════════
+  //  INIT — restore from cache
+  // ═══════════════════════════════════════════
+  async function init() {
+    const keys = await getAllCachedKeys();
+
+    if (keys.length) {
+      const overlay = showOverlay('Restoring cached definitions…');
+
+      for (const key of keys) {
+        const cached = await getCached(key);
+        if (cached) {
+          const mergedBundle = { entry: [] };
+          if (cached.resourceBundle?.entry) mergedBundle.entry.push(...cached.resourceBundle.entry);
+          if (cached.typesBundle?.entry) mergedBundle.entry.push(...cached.typesBundle.entry);
+
+          const processed = processBundle(mergedBundle);
+          const sampleBundle = cached.resourceBundle || cached.typesBundle;
+          processed.version = detectVersion(sampleBundle);
+          processed.baseUrl = versionBaseUrl(processed.version);
+          versions[processed.version] = processed;
+        }
+      }
+
+      overlay.remove();
+
+      const loaded = Object.keys(versions);
+      if (loaded.length) {
+        rebuildVersionDropdown(loaded[0]);
+        activateVersion(loaded[0]);
+        return;
+      }
+    }
+
+    rebuildVersionDropdown();
+    statusMsg.textContent = '';
+  }
+
+  init();
 })();
 </script>
 </body>
