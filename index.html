@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FHIR Schema Explorer</title>
+<style>
+  :root {
+    --bg: #f5f6fa;
+    --panel-bg: #ffffff;
+    --border: #e0e3eb;
+    --text: #1a1a2e;
+    --text-muted: #6b7280;
+    --primary: #4f46e5;
+    --primary-light: #e0e7ff;
+    --accent-obj: #4f46e5;
+    --accent-str: #059669;
+    --accent-num: #d97706;
+    --accent-bool: #dc2626;
+    --accent-arr: #7c3aed;
+    --accent-ref: #0891b2;
+    --accent-enum: #be185d;
+    --required-dot: #ef4444;
+    --hover-bg: #f0f1f5;
+    --tree-line: #d1d5db;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+    --radius: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--panel-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+    box-shadow: var(--shadow);
+    z-index: 100;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--primary);
+    white-space: nowrap;
+  }
+  header h1 span { color: var(--text); font-weight: 400; }
+
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+  }
+
+  select#version-select {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px;
+    background: var(--bg);
+    cursor: pointer;
+    outline: none;
+  }
+  select#version-select:focus { border-color: var(--primary); }
+
+  .search-wrapper {
+    position: relative;
+    flex: 1;
+    max-width: 420px;
+  }
+  .search-wrapper input {
+    width: 100%;
+    padding: 8px 12px 8px 36px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .search-wrapper input:focus { border-color: var(--primary); }
+  .search-wrapper .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 16px;
+    pointer-events: none;
+  }
+  .search-wrapper .clear-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    display: none;
+  }
+  .search-wrapper .clear-btn.visible { display: block; }
+
+  .dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    max-height: 360px;
+    overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    z-index: 200;
+    display: none;
+  }
+  .dropdown.open { display: block; }
+  .dropdown-group-label {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--text-muted);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+  }
+  .dropdown-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background .1s;
+  }
+  .dropdown-item:hover, .dropdown-item.active {
+    background: var(--primary-light);
+    color: var(--primary);
+  }
+
+  .status-msg {
+    font-size: 13px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  #load-file-btn {
+    padding: 6px 14px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 13px;
+    cursor: pointer;
+    display: none;
+    white-space: nowrap;
+  }
+  #load-file-btn:hover { opacity: 0.9; }
+
+  /* ── Main layout ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Tree panel ── */
+  .tree-panel {
+    flex: 1;
+    overflow: auto;
+    padding: 16px 24px;
+  }
+
+  .tree-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: 15px;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  /* Tree nodes */
+  .tree-node { position: relative; }
+  .tree-children {
+    margin-left: 20px;
+    padding-left: 16px;
+    border-left: 1px solid var(--tree-line);
+  }
+
+  .node-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+    transition: background .1s;
+    position: relative;
+  }
+  .node-row:hover { background: var(--hover-bg); }
+  .node-row.selected { background: var(--primary-light); }
+
+  .toggle-icon {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    transition: transform .15s;
+  }
+  .toggle-icon.expanded { transform: rotate(90deg); }
+  .toggle-icon.leaf { visibility: hidden; }
+
+  .required-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--required-dot);
+    flex-shrink: 0;
+  }
+
+  .type-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #fff;
+    flex-shrink: 0;
+    line-height: 1.4;
+  }
+  .type-badge.obj { background: var(--accent-obj); }
+  .type-badge.str { background: var(--accent-str); }
+  .type-badge.num { background: var(--accent-num); }
+  .type-badge.bool { background: var(--accent-bool); }
+  .type-badge.arr { background: var(--accent-arr); }
+  .type-badge.ref { background: var(--accent-ref); }
+  .type-badge.enum { background: var(--accent-enum); }
+
+  .node-name {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .node-type-label {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .node-cardinality {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--bg);
+    padding: 0 4px;
+    border-radius: 3px;
+  }
+
+  .node-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  .node-row:hover .node-actions { opacity: 1; }
+
+  .node-actions button {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all .1s;
+  }
+  .node-actions button:hover {
+    background: var(--primary-light);
+    color: var(--primary);
+    border-color: var(--primary);
+  }
+
+  /* ── Detail panel ── */
+  .detail-panel {
+    width: 360px;
+    background: var(--panel-bg);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    flex-shrink: 0;
+    display: none;
+    flex-direction: column;
+  }
+  .detail-panel.open { display: flex; }
+
+  .detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--panel-bg);
+    z-index: 10;
+  }
+  .detail-header h3 { font-size: 15px; font-weight: 600; }
+  .detail-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-muted);
+    line-height: 1;
+  }
+
+  .detail-body { padding: 16px; }
+
+  .detail-section {
+    margin-bottom: 16px;
+  }
+  .detail-section label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .detail-section .value {
+    font-size: 14px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
+  .path-copy-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .path-copy-row code {
+    flex: 1;
+    background: var(--bg);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    word-break: break-all;
+  }
+  .path-copy-row button {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .path-copy-row button:hover { opacity: .9; }
+
+  .enum-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+  }
+  .enum-list span {
+    background: var(--bg);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: monospace;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1a1a2e;
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    opacity: 0;
+    transition: all .3s;
+    z-index: 999;
+    pointer-events: none;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔥 FHIR <span>Schema Explorer</span></h1>
+  <div class="header-controls">
+    <select id="version-select">
+      <option value="R4" selected>R4 (4.0.1)</option>
+      <option value="R4B">R4B (4.3.0)</option>
+      <option value="R5">R5 (5.0.0)</option>
+    </select>
+    <div class="search-wrapper">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="Search resources (e.g. Patient, Observation…)" autocomplete="off" disabled>
+      <button class="clear-btn" id="clear-btn">✕</button>
+      <div class="dropdown" id="dropdown"></div>
+    </div>
+    <button id="load-file-btn">📂 Load local file</button>
+    <input type="file" id="file-input" accept=".json" style="display:none;">
+    <span class="status-msg" id="status-msg">Loading schema…</span>
+  </div>
+</header>
+
+<div class="main" id="main-area">
+  <div class="tree-panel" id="tree-panel">
+    <div class="tree-empty" id="tree-empty">
+      <div>
+        <div style="font-size:48px;margin-bottom:12px;">🌳</div>
+        <div><strong>Select a FHIR resource</strong> to explore its structure.</div>
+        <div style="margin-top:6px;font-size:13px;">Pick a version and search above.</div>
+      </div>
+    </div>
+    <div id="tree-root" style="display:none;"></div>
+  </div>
+
+  <div class="detail-panel" id="detail-panel">
+    <div class="detail-header">
+      <h3 id="detail-title">Details</h3>
+      <button class="detail-close" id="detail-close">×</button>
+    </div>
+    <div class="detail-body" id="detail-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  // ── Config ──
+  const SCHEMA_URLS = {
+    R4:  'https://hl7.org/fhir/R4/fhir.schema.json',
+    R4B: 'https://hl7.org/fhir/R4B/fhir.schema.json',
+    R5:  'https://hl7.org/fhir/R5/fhir.schema.json',
+  };
+
+  const CORS_PROXIES = [
+    url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  ];
+
+  // Known FHIR resource type names (common across versions)
+  const KNOWN_RESOURCES = new Set([
+    'Account','ActivityDefinition','AdministrableProductDefinition','AdverseEvent',
+    'AllergyIntolerance','Appointment','AppointmentResponse','AuditEvent',
+    'Basic','Binary','BiologicallyDerivedProduct','BodyStructure','Bundle',
+    'CapabilityStatement','CarePlan','CareTeam','CatalogEntry','ChargeItem',
+    'ChargeItemDefinition','Citation','Claim','ClaimResponse','ClinicalImpression',
+    'ClinicalUseDefinition','CodeSystem','Communication','CommunicationRequest',
+    'CompartmentDefinition','Composition','ConceptMap','Condition','Consent',
+    'Contract','Coverage','CoverageEligibilityRequest','CoverageEligibilityResponse',
+    'DetectedIssue','Device','DeviceDefinition','DeviceMetric','DeviceRequest',
+    'DeviceUseStatement','DiagnosticReport','DocumentManifest','DocumentReference',
+    'Encounter','Endpoint','EnrollmentRequest','EnrollmentResponse',
+    'EpisodeOfCare','EventDefinition','Evidence','EvidenceReport','EvidenceVariable',
+    'ExampleScenario','ExplanationOfBenefit','FamilyMemberHistory','Flag',
+    'Goal','GraphDefinition','Group','GuidanceResponse','HealthcareService',
+    'ImagingStudy','Immunization','ImmunizationEvaluation','ImmunizationRecommendation',
+    'ImplementationGuide','Ingredient','InsurancePlan','Invoice','Library',
+    'Linkage','List','Location','ManufacturedItemDefinition','Measure',
+    'MeasureReport','Media','Medication','MedicationAdministration',
+    'MedicationDispense','MedicationKnowledge','MedicationRequest',
+    'MedicationStatement','MedicinalProductDefinition','MessageDefinition',
+    'MessageHeader','MolecularSequence','NamingSystem','NutritionOrder',
+    'NutritionProduct','Observation','ObservationDefinition','OperationDefinition',
+    'OperationOutcome','Organization','OrganizationAffiliation','PackagedProductDefinition',
+    'Parameters','Patient','PaymentNotice','PaymentReconciliation','Person',
+    'PlanDefinition','Practitioner','PractitionerRole','Procedure','Provenance',
+    'Questionnaire','QuestionnaireResponse','RegulatedAuthorization',
+    'RelatedPerson','RequestGroup','ResearchDefinition','ResearchElementDefinition',
+    'ResearchStudy','ResearchSubject','RiskAssessment','Schedule',
+    'SearchParameter','ServiceRequest','Slot','Specimen','SpecimenDefinition',
+    'StructureDefinition','StructureMap','Subscription','SubscriptionStatus',
+    'SubscriptionTopic','Substance','SubstanceDefinition','SupplyDelivery',
+    'SupplyRequest','Task','TerminologyCapabilities','TestReport','TestScript',
+    'ValueSet','VerificationResult','VisionPrescription',
+    // R5 additions
+    'ActorDefinition','ArtifactAssessment','BiologicallyDerivedProductDispense',
+    'ConditionDefinition','DeviceAssociation','DeviceDispense','DeviceUsage',
+    'EncounterHistory','FormularyItem','GenomicStudy','ImagingSelection',
+    'InventoryItem','InventoryReport','NutritionIntake',
+    'Permission','Requirements','TestPlan','Transport',
+  ]);
+
+  // ── State ──
+  let schemaCache = {};
+  let currentSchema = null;
+  let currentVersion = 'R4';
+  let resourceNames = [];
+  let complexTypes = [];
+  let selectedNode = null;
+
+  // ── DOM refs ──
+  const versionSelect = document.getElementById('version-select');
+  const searchInput = document.getElementById('search-input');
+  const clearBtn = document.getElementById('clear-btn');
+  const dropdown = document.getElementById('dropdown');
+  const statusMsg = document.getElementById('status-msg');
+  const treePanel = document.getElementById('tree-panel');
+  const treeEmpty = document.getElementById('tree-empty');
+  const treeRoot = document.getElementById('tree-root');
+  const detailPanel = document.getElementById('detail-panel');
+  const detailTitle = document.getElementById('detail-title');
+  const detailBody = document.getElementById('detail-body');
+  const detailClose = document.getElementById('detail-close');
+  const toastEl = document.getElementById('toast');
+  const mainArea = document.getElementById('main-area');
+  const loadFileBtn = document.getElementById('load-file-btn');
+  const fileInput = document.getElementById('file-input');
+
+  // ── Schema loading with CORS fallback chain ──
+  async function loadSchema(version) {
+    if (schemaCache[version]) {
+      currentSchema = schemaCache[version];
+      onSchemaReady();
+      return;
+    }
+
+    statusMsg.textContent = `Loading ${version} schema…`;
+    searchInput.disabled = true;
+    loadFileBtn.style.display = 'none';
+
+    // Show loading overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'loading-overlay';
+    overlay.innerHTML = '<div class="spinner"></div>';
+    mainArea.style.position = 'relative';
+    mainArea.appendChild(overlay);
+
+    const directUrl = SCHEMA_URLS[version];
+
+    // Strategy 1: direct fetch
+    try {
+      const resp = await fetch(directUrl);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      schemaCache[version] = data;
+      currentSchema = data;
+      overlay.remove();
+      onSchemaReady();
+      return;
+    } catch (_) { /* CORS or network error — try proxies */ }
+
+    // Strategy 2: CORS proxies
+    for (const makeUrl of CORS_PROXIES) {
+      try {
+        const resp = await fetch(makeUrl(directUrl));
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        schemaCache[version] = data;
+        currentSchema = data;
+        overlay.remove();
+        onSchemaReady();
+        return;
+      } catch (_) { /* try next proxy */ }
+    }
+
+    // Strategy 3: ask user to load a local file
+    overlay.remove();
+    statusMsg.textContent = `CORS blocked — load the ${version} schema file manually ↓`;
+    loadFileBtn.style.display = 'inline-block';
+    loadFileBtn.textContent = `📂 Load fhir.schema.json (${version})`;
+  }
+
+  // ── File picker logic ──
+  loadFileBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    statusMsg.textContent = 'Parsing schema…';
+    loadFileBtn.style.display = 'none';
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      if (!data.definitions) {
+        throw new Error('Invalid schema: no "definitions" key found.');
+      }
+
+      schemaCache[currentVersion] = data;
+      currentSchema = data;
+      onSchemaReady();
+    } catch (err) {
+      statusMsg.textContent = `Error: ${err.message}`;
+      loadFileBtn.style.display = 'inline-block';
+    }
+
+    // Reset so the same file can be re-selected
+    fileInput.value = '';
+  });
+
+  // ── Schema ready ──
+  function onSchemaReady() {
+    const defs = currentSchema.definitions || {};
+    const allNames = Object.keys(defs).sort();
+
+    resourceNames = allNames.filter(n => {
+      const def = defs[n];
+      if (KNOWN_RESOURCES.has(n)) return true;
+      if (def && def.properties && def.properties.resourceType) return true;
+      return false;
+    });
+
+    complexTypes = allNames.filter(n => !resourceNames.includes(n));
+
+    statusMsg.textContent = `${currentVersion}: ${resourceNames.length} resources, ${complexTypes.length} types`;
+    searchInput.disabled = false;
+    searchInput.focus();
+  }
+
+  // ── Search / Dropdown ──
+  let dropdownIndex = -1;
+
+  function renderDropdown(filter) {
+    const f = filter.toLowerCase();
+    let matchedRes = resourceNames.filter(n => n.toLowerCase().includes(f));
+    const matchedTypes = complexTypes.filter(n => n.toLowerCase().includes(f));
+
+    if (!f && !matchedRes.length && !matchedTypes.length) {
+      matchedRes = [...resourceNames];
+    }
+
+    if (!matchedRes.length && !matchedTypes.length) {
+      dropdown.classList.remove('open');
+      return;
+    }
+
+    let html = '';
+    if (matchedRes.length) {
+      html += '<div class="dropdown-group-label">Resources</div>';
+      matchedRes.forEach((n, i) => {
+        html += `<div class="dropdown-item" data-name="${n}" data-idx="${i}">${highlight(n, f)}</div>`;
+      });
+    }
+    if (matchedTypes.length) {
+      html += '<div class="dropdown-group-label">Complex Types</div>';
+      matchedTypes.slice(0, 80).forEach((n, i) => {
+        html += `<div class="dropdown-item" data-name="${n}" data-idx="${matchedRes.length + i}">${highlight(n, f)}</div>`;
+      });
+      if (matchedTypes.length > 80) {
+        html += `<div class="dropdown-item" style="color:var(--text-muted);cursor:default;font-style:italic;">… and ${matchedTypes.length - 80} more</div>`;
+      }
+    }
+
+    dropdown.innerHTML = html;
+    dropdown.classList.add('open');
+    dropdownIndex = -1;
+
+    dropdown.querySelectorAll('.dropdown-item[data-name]').forEach(el => {
+      el.addEventListener('click', () => selectResource(el.dataset.name));
+    });
+  }
+
+  function highlight(text, query) {
+    if (!query) return text;
+    const idx = text.toLowerCase().indexOf(query);
+    if (idx < 0) return text;
+    return text.slice(0, idx) + '<strong>' + text.slice(idx, idx + query.length) + '</strong>' + text.slice(idx + query.length);
+  }
+
+  searchInput.addEventListener('input', () => {
+    const v = searchInput.value.trim();
+    clearBtn.classList.toggle('visible', v.length > 0);
+    renderDropdown(v);
+  });
+
+  searchInput.addEventListener('focus', () => {
+    if (resourceNames.length) renderDropdown(searchInput.value.trim());
+  });
+
+  clearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    clearBtn.classList.remove('visible');
+    dropdown.classList.remove('open');
+    searchInput.focus();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-wrapper')) dropdown.classList.remove('open');
+  });
+
+  searchInput.addEventListener('keydown', (e) => {
+    const items = dropdown.querySelectorAll('.dropdown-item[data-name]');
+    if (!items.length) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      dropdownIndex = Math.min(dropdownIndex + 1, items.length - 1);
+      updateDropdownHighlight(items);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      dropdownIndex = Math.max(dropdownIndex - 1, 0);
+      updateDropdownHighlight(items);
+    } else if (e.key === 'Enter' && dropdownIndex >= 0) {
+      e.preventDefault();
+      items[dropdownIndex].click();
+    } else if (e.key === 'Escape') {
+      dropdown.classList.remove('open');
+    }
+  });
+
+  function updateDropdownHighlight(items) {
+    items.forEach((el, i) => el.classList.toggle('active', i === dropdownIndex));
+    if (items[dropdownIndex]) items[dropdownIndex].scrollIntoView({ block: 'nearest' });
+  }
+
+  // ── Version change ──
+  versionSelect.addEventListener('change', () => {
+    currentVersion = versionSelect.value;
+    treeRoot.innerHTML = '';
+    treeRoot.style.display = 'none';
+    treeEmpty.style.display = 'flex';
+    closeDetail();
+    loadSchema(currentVersion);
+  });
+
+  // ── Schema resolution helpers ──
+  function resolveRef(ref) {
+    if (!ref || !currentSchema) return null;
+    const path = ref.replace('#/definitions/', '');
+    return currentSchema.definitions?.[path] || null;
+  }
+
+  function getEffectiveSchema(schema) {
+    if (!schema) return null;
+    if (schema.$ref) return resolveRef(schema.$ref);
+    if (schema.items && schema.items.$ref) return resolveRef(schema.items.$ref);
+    return schema;
+  }
+
+  function getTypeName(schema) {
+    if (!schema) return 'unknown';
+    if (schema.$ref) return schema.$ref.replace('#/definitions/', '');
+    if (schema.enum) return 'enum';
+    if (schema.const !== undefined) return `"${schema.const}"`;
+    if (schema.type === 'array' && schema.items) {
+      return getTypeName(schema.items) + '[]';
+    }
+    return schema.type || 'object';
+  }
+
+  function getTypeBadge(schema) {
+    if (!schema) return { cls: 'obj', label: '{}' };
+    if (schema.enum) return { cls: 'enum', label: 'E' };
+    if (schema.$ref) {
+      const refName = schema.$ref.replace('#/definitions/', '');
+      if (refName === 'Reference') return { cls: 'ref', label: '→' };
+      return { cls: 'obj', label: '{}' };
+    }
+    if (schema.type === 'array') return { cls: 'arr', label: '[]' };
+    if (schema.type === 'string') return { cls: 'str', label: 'S' };
+    if (schema.type === 'number' || schema.type === 'integer') return { cls: 'num', label: '#' };
+    if (schema.type === 'boolean') return { cls: 'bool', label: 'B' };
+    return { cls: 'obj', label: '{}' };
+  }
+
+  function hasChildren(schema) {
+    const eff = getEffectiveSchema(schema);
+    if (!eff) return false;
+    if (eff.properties) return true;
+    if (eff.type === 'array' && eff.items) return hasChildren(eff.items);
+    return false;
+  }
+
+  function getChildren(schema) {
+    const eff = getEffectiveSchema(schema);
+    if (!eff) return {};
+    if (eff.properties) return eff.properties;
+    if (eff.type === 'array' && eff.items) return getChildren(eff.items);
+    return {};
+  }
+
+  function getRequired(schema) {
+    const eff = getEffectiveSchema(schema);
+    if (!eff) return [];
+    return eff.required || [];
+  }
+
+  function getCardinality(propName, parentSchema, propSchema) {
+    const req = getRequired(parentSchema);
+    const isRequired = req.includes(propName);
+    const isArray = propSchema?.type === 'array';
+    if (isArray) return isRequired ? '1..*' : '0..*';
+    return isRequired ? '1..1' : '0..1';
+  }
+
+  // ── Tree rendering ──
+  function selectResource(name) {
+    dropdown.classList.remove('open');
+    searchInput.value = name;
+    clearBtn.classList.add('visible');
+
+    const def = currentSchema.definitions?.[name];
+    if (!def) return;
+
+    treeEmpty.style.display = 'none';
+    treeRoot.style.display = 'block';
+    treeRoot.innerHTML = '';
+    closeDetail();
+
+    const rootNode = createTreeNode(name, { $ref: `#/definitions/${name}` }, null, name, true);
+    treeRoot.appendChild(rootNode);
+
+    // Auto-expand root
+    const toggle = rootNode.querySelector('.toggle-icon');
+    if (toggle && !toggle.classList.contains('leaf')) {
+      expandNode(rootNode, name, { $ref: `#/definitions/${name}` });
+      toggle.classList.add('expanded');
+    }
+  }
+
+  function createTreeNode(propName, propSchema, parentSchema, fhirPath, isRoot) {
+    const node = document.createElement('div');
+    node.className = 'tree-node';
+
+    const row = document.createElement('div');
+    row.className = 'node-row';
+
+    const canExpand = hasChildren(propSchema);
+    const badge = getTypeBadge(propSchema);
+    const typeName = getTypeName(propSchema);
+    const cardinality = parentSchema ? getCardinality(propName, parentSchema, propSchema) : '';
+    const isRequired = parentSchema ? getRequired(parentSchema).includes(propName) : false;
+
+    // Toggle icon
+    const toggleEl = document.createElement('span');
+    toggleEl.className = 'toggle-icon' + (canExpand ? '' : ' leaf');
+    toggleEl.textContent = '▶';
+    row.appendChild(toggleEl);
+
+    // Required dot
+    if (isRequired) {
+      const dot = document.createElement('span');
+      dot.className = 'required-dot';
+      dot.title = 'Required';
+      row.appendChild(dot);
+    }
+
+    // Type badge
+    const badgeEl = document.createElement('span');
+    badgeEl.className = `type-badge ${badge.cls}`;
+    badgeEl.textContent = badge.label;
+    row.appendChild(badgeEl);
+
+    // Name
+    const nameEl = document.createElement('span');
+    nameEl.className = 'node-name';
+    nameEl.textContent = propName;
+    row.appendChild(nameEl);
+
+    // Type label
+    if (!isRoot) {
+      const typeEl = document.createElement('span');
+      typeEl.className = 'node-type-label';
+      typeEl.textContent = typeName;
+      row.appendChild(typeEl);
+    }
+
+    // Cardinality
+    if (cardinality) {
+      const cardEl = document.createElement('span');
+      cardEl.className = 'node-cardinality';
+      cardEl.textContent = cardinality;
+      row.appendChild(cardEl);
+    }
+
+    // Action buttons
+    const actions = document.createElement('span');
+    actions.className = 'node-actions';
+
+    const infoBtn = document.createElement('button');
+    infoBtn.textContent = 'ℹ️ Info';
+    infoBtn.title = 'Show details';
+    infoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showDetail(propName, propSchema, parentSchema, fhirPath, cardinality, isRequired);
+      highlightRow(row);
+    });
+    actions.appendChild(infoBtn);
+
+    const pathBtn = document.createElement('button');
+    pathBtn.textContent = '📋 Path';
+    pathBtn.title = 'Copy FHIR path';
+    pathBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      copyToClipboard(fhirPath);
+    });
+    actions.appendChild(pathBtn);
+
+    row.appendChild(actions);
+
+    // Click handler
+    row.addEventListener('click', () => {
+      if (canExpand) {
+        const childrenEl = node.querySelector(':scope > .tree-children');
+        if (childrenEl) {
+          childrenEl.remove();
+          toggleEl.classList.remove('expanded');
+        } else {
+          expandNode(node, fhirPath, propSchema);
+          toggleEl.classList.add('expanded');
+        }
+      }
+      showDetail(propName, propSchema, parentSchema, fhirPath, cardinality, isRequired);
+      highlightRow(row);
+    });
+
+    node.appendChild(row);
+    return node;
+  }
+
+  function expandNode(nodeEl, parentPath, parentSchemaRef) {
+    const children = getChildren(parentSchemaRef);
+    const childNames = Object.keys(children);
+    if (!childNames.length) return;
+
+    const container = document.createElement('div');
+    container.className = 'tree-children';
+
+    childNames.sort().forEach(name => {
+      if (name.startsWith('_')) return;
+
+      const childSchema = children[name];
+      const childPath = parentPath + '.' + name;
+      const childNode = createTreeNode(name, childSchema, parentSchemaRef, childPath, false);
+      container.appendChild(childNode);
+    });
+
+    nodeEl.appendChild(container);
+  }
+
+  function highlightRow(row) {
+    if (selectedNode) selectedNode.classList.remove('selected');
+    row.classList.add('selected');
+    selectedNode = row;
+  }
+
+  // ── Detail panel ──
+  function showDetail(propName, propSchema, parentSchema, fhirPath, cardinality, isRequired) {
+    detailTitle.textContent = propName;
+    detailBody.innerHTML = '';
+
+    // Path
+    addDetailSection('FHIR Path', () => {
+      const row = document.createElement('div');
+      row.className = 'path-copy-row';
+      const code = document.createElement('code');
+      code.textContent = fhirPath;
+      row.appendChild(code);
+      const btn = document.createElement('button');
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', () => copyToClipboard(fhirPath));
+      row.appendChild(btn);
+      return row;
+    });
+
+    // Type
+    const typeName = getTypeName(propSchema);
+    addDetailSection('Type', () => {
+      const span = document.createElement('span');
+      span.className = 'value';
+      span.textContent = typeName;
+      return span;
+    });
+
+    // Cardinality
+    if (cardinality) {
+      addDetailSection('Cardinality', () => {
+        const span = document.createElement('span');
+        span.className = 'value';
+        span.textContent = cardinality + (isRequired ? ' (required)' : ' (optional)');
+        return span;
+      });
+    }
+
+    // Description
+    const eff = getEffectiveSchema(propSchema);
+    if (eff?.description) {
+      addDetailSection('Description', () => {
+        const p = document.createElement('span');
+        p.className = 'value';
+        p.textContent = eff.description;
+        return p;
+      });
+    }
+
+    // Enum values
+    if (propSchema?.enum || eff?.enum) {
+      const vals = propSchema?.enum || eff?.enum;
+      addDetailSection('Allowed Values', () => {
+        const list = document.createElement('div');
+        list.className = 'enum-list';
+        vals.forEach(v => {
+          const s = document.createElement('span');
+          s.textContent = v;
+          list.appendChild(s);
+        });
+        return list;
+      });
+    }
+
+    // Pattern
+    if (eff?.pattern) {
+      addDetailSection('Pattern (Regex)', () => {
+        const code = document.createElement('code');
+        code.style.cssText = 'background:var(--bg);padding:4px 8px;border-radius:4px;font-size:12px;display:block;word-break:break-all;';
+        code.textContent = eff.pattern;
+        return code;
+      });
+    }
+
+    // Ref target
+    if (propSchema?.$ref) {
+      addDetailSection('Schema Reference', () => {
+        const span = document.createElement('span');
+        span.className = 'value';
+        span.textContent = propSchema.$ref.replace('#/definitions/', '');
+        span.style.color = 'var(--primary)';
+        span.style.cursor = 'pointer';
+        span.addEventListener('click', () => {
+          const refName = propSchema.$ref.replace('#/definitions/', '');
+          selectResource(refName);
+        });
+        return span;
+      });
+    }
+
+    // Array item ref
+    if (propSchema?.type === 'array' && propSchema?.items?.$ref) {
+      addDetailSection('Array Item Type', () => {
+        const span = document.createElement('span');
+        span.className = 'value';
+        const refName = propSchema.items.$ref.replace('#/definitions/', '');
+        span.textContent = refName;
+        span.style.color = 'var(--primary)';
+        span.style.cursor = 'pointer';
+        span.addEventListener('click', () => selectResource(refName));
+        return span;
+      });
+    }
+
+    // Properties count
+    const childProps = getChildren(propSchema);
+    const childCount = Object.keys(childProps).filter(k => !k.startsWith('_')).length;
+    if (childCount > 0) {
+      addDetailSection('Child Properties', () => {
+        const span = document.createElement('span');
+        span.className = 'value';
+        span.textContent = `${childCount} properties`;
+        return span;
+      });
+    }
+
+    detailPanel.classList.add('open');
+  }
+
+  function addDetailSection(label, contentFn) {
+    const section = document.createElement('div');
+    section.className = 'detail-section';
+    const lbl = document.createElement('label');
+    lbl.textContent = label;
+    section.appendChild(lbl);
+    section.appendChild(contentFn());
+    detailBody.appendChild(section);
+  }
+
+  function closeDetail() {
+    detailPanel.classList.remove('open');
+    if (selectedNode) {
+      selectedNode.classList.remove('selected');
+      selectedNode = null;
+    }
+  }
+
+  detailClose.addEventListener('click', closeDetail);
+
+  // ── Clipboard ──
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast(`Copied: ${text}`);
+    }).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast(`Copied: ${text}`);
+    });
+  }
+
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    setTimeout(() => toastEl.classList.remove('show'), 2000);
+  }
+
+  // ── Init ──
+  loadSchema(currentVersion);
+})();
+</script>
+</body>
+</html>
